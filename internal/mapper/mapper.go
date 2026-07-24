@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/to4kawa/repomapper-go/internal/analyzer"
@@ -23,14 +24,14 @@ func Generate(opts Options) (string, error) {
 
 	ts := analyzer.NewTreeSitterAnalyzer()
 	if syms, err := ts.AnalyzeDir(opts.Path); err != nil {
-		// 警告は呼び出し側で出してもよいが、ここでは継続
+		fmt.Fprintf(os.Stderr, "warning: treesitter: %v\n", err)
 	} else {
 		all = append(all, syms...)
 	}
 
 	rs := analyzer.NewRustAnalyzer()
 	if syms, err := rs.AnalyzeDir(opts.Path); err != nil {
-		// 同上
+		fmt.Fprintf(os.Stderr, "warning: rust analyzer: %v\n", err)
 	} else {
 		all = append(all, syms...)
 	}

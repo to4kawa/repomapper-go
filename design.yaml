@@ -3,18 +3,19 @@
 
 goal: |
   Aider由来のRepoMapをGoで再実装する。
-  Gitリポジトリから重要なシンボルを抽出し、LLMに渡しやすい簡潔なマップを生成するCLIを作る。
-  高速・シングルバイナリ・依存最小を目指す。
+  Gitリポジトリから重要なシンボルを抽出し、LLMに渡しやすい簡潔なマップを生成する。
+  CLIとMCPサーバーの両方で利用できる。
 
 requirements:
   must:
     - Gitリポジトリを指定してシンボルマップを出力できる
     - Go と Rust のシンボル抽出ができる
     - ファイル単位でまとめた読みやすいテキスト出力
+    - MCPサーバー（stdio）で repo_map ツールを提供できる
   should:
     - 重要度ランキング
-    - トークン数制限（-tokens）
-    - MCPサーバーとしてツール提供できる
+    - トークン数制限（-tokens / MCP引数）
+    - 解析エラーを黙殺せず警告として出す
   constraints:
     language_framework: Go 1.22+
     external_services: なし（オフライン動作）
@@ -29,61 +30,58 @@ repo_structure: |
   ├── README.md
   ├── design.yaml
   ├── cmd/
-  │   ├── repomapper/
-  │   │   └── main.go          # CLI
-  │   └── mcp/
-  │       └── main.go          # MCPサーバー（stdio）
+  │   ├── repomapper/          # CLI
+  │   └── mcp/                 # MCPサーバー（stdio）
   ├── internal/
   │   ├── analyzer/
   │   ├── output/
-  │   └── mapper/              # CLI/MCP共通のマップ生成
+  │   └── mapper/              # CLI/MCP共通
   ├── rust-analyzer/
   └── scripts/
 
 approach:
-  - Walking Skeleton（Git認識 + ファイル一覧）から始める
+  - Walking Skeletonから始める
   - 言語ごとにアナライザーを独立させる
-  - 出力フォーマットを先に固める
-  - ランキング・トークン制限は後回し
+  - CLIとMCPで mapper を共有する
+  - エラーは握りつぶさず警告する
 
 main_modules:
   - name: analyzer
-    responsibility: 言語ごとのシンボル抽出
+    responsibility: 言語ごとのシンボル抽出とランキング
     depends_on: []
   - name: output
     responsibility: 整形・トークン制限
     depends_on: [analyzer]
   - name: mapper
-    responsibility: 解析〜出力までの一連処理（CLI/MCP共通）
+    responsibility: 解析〜出力の一連処理
     depends_on: [analyzer, output]
   - name: mcp
     responsibility: MCPツール repo_map の提供
     depends_on: [mapper]
-    
+
 contract:
   inputs:
     - Gitリポジトリのパス
+    - （任意）最大トークン数
   outputs:
-    - ファイル単位でまとめたシンボルマップ（テキスト）
+    - ファイル単位のシンボルマップ（テキスト）
   invariants:
     - Gitリポジトリでない場合はエラー終了
     - 未対応言語のファイルは無視する
+    - 個別ファイルの解析失敗は処理全体を止めない
   error_handling:
-    - 解析エラーは警告として出力し、処理は継続する
-
-implementation_loop:
-  - 最小機能を実装
-  - 動作確認
-  - 次の言語 or 機能を追加
+    - 解析エラーは警告としてstderrに出し、処理は継続する
+    - リポジトリ自体が無効な場合のみfatal
 
 testing:
   strategy:
-    unit: 各analyzerの抽出結果
+    unit: output / ranker / mapper
     integration: 実際のリポジトリに対するマップ生成
   must_pass_cases:
     - Goリポジトリから関数・型が取れる
     - Rustリポジトリから関数・型・traitが取れる
     - 空に近いリポジトリでpanicしない
+    - -tokens 指定時に出力が制限される
   how_to_run: |
     go test ./...
     cargo test --manifest-path rust-analyzer/Cargo.toml
