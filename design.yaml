@@ -13,8 +13,8 @@ requirements:
     - ファイル単位でまとめた読みやすいテキスト出力
   should:
     - 重要度ランキング
-    - トークン数制限
-    - 他言語対応の拡張しやすさ
+    - トークン数制限（-tokens）
+    - MCPサーバーとしてツール提供できる
   constraints:
     language_framework: Go 1.22+
     external_services: なし（オフライン動作）
@@ -29,18 +29,15 @@ repo_structure: |
   ├── README.md
   ├── design.yaml
   ├── cmd/
-  │   └── repomapper/
-  │       └── main.go
+  │   ├── repomapper/
+  │   │   └── main.go          # CLI
+  │   └── mcp/
+  │       └── main.go          # MCPサーバー（stdio）
   ├── internal/
   │   ├── analyzer/
-  │   │   ├── go_analyzer.go      # go/ast
-  │   │   ├── treesitter.go       # gotreesitter
-  │   │   └── rust_analyzer.go    # 外部synバイナリ呼び出し
-  │   └── output/
-  │       └── formatter.go
-  ├── rust-analyzer/              # synベースのRust CLI
-  │   ├── Cargo.toml
-  │   └── src/main.rs
+  │   ├── output/
+  │   └── mapper/              # CLI/MCP共通のマップ生成
+  ├── rust-analyzer/
   └── scripts/
 
 approach:
@@ -54,12 +51,15 @@ main_modules:
     responsibility: 言語ごとのシンボル抽出
     depends_on: []
   - name: output
-    responsibility: シンボルを読みやすいマップ形式に整形
+    responsibility: 整形・トークン制限
     depends_on: [analyzer]
-  - name: rust-analyzer
-    responsibility: synを使ったRustシンボル抽出（外部バイナリ）
-    depends_on: []
-
+  - name: mapper
+    responsibility: 解析〜出力までの一連処理（CLI/MCP共通）
+    depends_on: [analyzer, output]
+  - name: mcp
+    responsibility: MCPツール repo_map の提供
+    depends_on: [mapper]
+    
 contract:
   inputs:
     - Gitリポジトリのパス

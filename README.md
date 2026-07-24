@@ -2,41 +2,44 @@
 
 Aider由来のRepoMap機能をGoで再実装したツール。
 
-リポジトリ内の重要なシンボル（関数・型・メソッドなど）を抽出し、LLMに渡しやすい簡潔なマップを生成する。
+リポジトリ内の重要なシンボルを抽出し、LLMに渡しやすい簡潔なマップを生成する。
 
 ## 現状
 
 - [x] Gitリポジトリの認識
 - [x] ファイル一覧の取得
-- [x] シンボル抽出（Go）
-- [ ] 重要度ランキング
-- [ ] トークン制限付きマップ生成
+- [x] シンボル抽出（Go / Rust）
+- [x] 重要度ランキング
+- [x] トークン制限付きマップ生成（`-tokens`）
 - [ ] MCPサーバー対応
 
-## 使い方（現在）
+## 使い方（CLI）
 
 ```bash
-go run ./cmd/repomapper <repository-path>
+# 制限なし
+go run ./cmd/repomapper <path>
+
+# トークン制限あり
+go run ./cmd/repomapper -tokens 8000 <path>
 ```
 
-例:
+## MCP（予定）
+
+stdioでMCPサーバーとして起動し、repo_map ツールを提供する。
 
 ```bash
-go run ./cmd/repomapper .
-go run ./cmd/repomapper C:\path\to\repo
+go run ./cmd/mcp
 ```
 
 ## 開発
 
 ```bash
-# 依存取得
 go mod tidy
-
-# 実行
-go run ./cmd/repomapper <path>
-
-# テスト
+go run ./cmd/repomapper .
 go test ./...
+
+# Rust analyzer
+cargo build --manifest-path rust-analyzer/Cargo.toml
 ```
 
 ## 設計

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,12 +12,16 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: repomapper <path>")
+	maxTokens := flag.Int("tokens", 0, "max tokens for output (0 = no limit)")
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		fmt.Println("Usage: repomapper [flags] <path>")
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	repoPath := os.Args[1]
+	repoPath := flag.Arg(0)
 	absPath, err := filepath.Abs(repoPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error resolving path: %v\n", err)
@@ -31,25 +36,26 @@ func main() {
 
 	var allSymbols []analyzer.Symbol
 
-	// 1. gotreesitter（Go / Python / JS など）
 	ts := analyzer.NewTreeSitterAnalyzer()
-	tsSymbols, err := ts.AnalyzeDir(absPath)
-	if err != nil {
+	if syms, err := ts.AnalyzeDir(absPath); err != nil {
 		fmt.Fprintf(os.Stderr, "treesitter analyze warning: %v\n", err)
 	} else {
-		allSymbols = append(allSymbols, tsSymbols...)
+		allSymbols = append(allSymbols, syms...)
 	}
 
-	// 2. Rust（外部バイナリ）
 	rs := analyzer.NewRustAnalyzer()
-	rsSymbols, err := rs.AnalyzeDir(absPath)
-	if err != nil {
-		// バイナリがない場合は警告だけ出して続行
+	if syms, err := rs.AnalyzeDir(absPath); err != nil {
 		fmt.Fprintf(os.Stderr, "rust analyze warning: %v\n", err)
 	} else {
-		allSymbols = append(allSymbols, rsSymbols...)
+		allSymbols = append(allSymbols, syms...)
 	}
 
 	allSymbols = analyzer.Rank(allSymbols)
-	fmt.Print(output.FormatSymbols(allSymbols, absPath))
+
+	mapText := output.FormatSymbols(allSymbols, absPath)
+	if *maxTokens > 0 {
+		mapText = output.LimitByTokens(mapText, *maxTokens)
+	}
+
+	fmt.Print(mapText)
 }
