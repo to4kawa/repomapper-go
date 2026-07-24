@@ -29,12 +29,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	a := analyzer.NewTreeSitterAnalyzer()
-	symbols, err := a.AnalyzeDir(absPath)
+	var allSymbols []analyzer.Symbol
+
+	// 1. gotreesitter（Go / Python / JS など）
+	ts := analyzer.NewTreeSitterAnalyzer()
+	tsSymbols, err := ts.AnalyzeDir(absPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Analyze error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "treesitter analyze warning: %v\n", err)
+	} else {
+		allSymbols = append(allSymbols, tsSymbols...)
 	}
 
-	fmt.Print(output.FormatSymbols(symbols, absPath))
+	// 2. Rust（外部バイナリ）
+	rs := analyzer.NewRustAnalyzer()
+	rsSymbols, err := rs.AnalyzeDir(absPath)
+	if err != nil {
+		// バイナリがない場合は警告だけ出して続行
+		fmt.Fprintf(os.Stderr, "rust analyze warning: %v\n", err)
+	} else {
+		allSymbols = append(allSymbols, rsSymbols...)
+	}
+
+	allSymbols = analyzer.Rank(allSymbols)
+	fmt.Print(output.FormatSymbols(allSymbols, absPath))
 }
