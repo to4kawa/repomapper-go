@@ -10,8 +10,9 @@ import (
 )
 
 type RepoMapInput struct {
-	Path   string `json:"path" jsonschema:"repository path to map"`
-	Tokens int    `json:"tokens,omitempty" jsonschema:"optional max tokens (0 = no limit)"`
+	Path         string `json:"path" jsonschema:"repository path to map"`
+	Tokens       int    `json:"tokens,omitempty" jsonschema:"optional max tokens (0 = no limit)"`
+	IncludeTests bool   `json:"include_tests,omitempty" jsonschema:"include test symbols (default false)"`
 }
 
 type RepoMapOutput struct {
@@ -36,8 +37,9 @@ func main() {
 		}
 
 		text, err := mapper.Generate(mapper.Options{
-			Path:      in.Path,
-			MaxTokens: in.Tokens,
+			Path:         in.Path,
+			MaxTokens:    in.Tokens,
+			IncludeTests: in.IncludeTests,
 		})
 		if err != nil {
 			return nil, RepoMapOutput{}, err

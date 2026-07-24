@@ -18,6 +18,17 @@ fn main() {
 
     for entry in WalkDir::new(&path).into_iter().filter_map(|e| e.ok()) {
         let p = entry.path();
+        // テストディレクトリ・テストファイルをスキップ
+        if p.components().any(|c| c.as_os_str() == "tests") {
+            continue;
+        }
+        if p.file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.ends_with("_test.rs"))
+            .unwrap_or(false)
+        {
+            continue;
+        }
         if p.extension().map(|e| e == "rs").unwrap_or(false) {
             if let Ok(src) = fs::read_to_string(p) {
                 if let Ok(file) = syn::parse_file(&src) {

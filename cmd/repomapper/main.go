@@ -11,6 +11,7 @@ import (
 
 func main() {
 	maxTokens := flag.Int("tokens", 0, "max tokens for output (0 = no limit)")
+	includeTests := flag.Bool("include-tests", false, "include test symbols in the map")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -26,8 +27,9 @@ func main() {
 	}
 
 	text, err := mapper.Generate(mapper.Options{
-		Path:      absPath,
-		MaxTokens: *maxTokens,
+		Path:         absPath,
+		MaxTokens:    *maxTokens,
+		IncludeTests: *includeTests,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
