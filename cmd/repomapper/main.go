@@ -29,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	a := analyzer.NewGoAnalyzer()
+	a := analyzer.NewTreeSitterAnalyzer()
 	symbols, err := a.AnalyzeDir(absPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Analyze error: %v\n", err)

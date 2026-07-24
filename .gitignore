@@ -1,0 +1,7 @@
+# Rust
+rust-analyzer/target/
+
+# Go
+*.exe
+*.test
+/bin/
