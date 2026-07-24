@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/to4kawa/repomapper-go/internal/analyzer"
+	"github.com/to4kawa/repomapper-go/internal/output"
 )
 
 func main() {
@@ -22,41 +23,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Gitリポジトリとして開けるか確認
-	repo, err := git.PlainOpen(absPath)
+	_, err = git.PlainOpen(absPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Not a git repository: %v\n", err)
 		os.Exit(1)
 	}
 
-	// HEADのツリーを取得
-	ref, err := repo.Head()
+	a := analyzer.NewGoAnalyzer()
+	symbols, err := a.AnalyzeDir(absPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get HEAD: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Analyze error: %v\n", err)
 		os.Exit(1)
 	}
 
-	commit, err := repo.CommitObject(ref.Hash())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get commit: %v\n", err)
-		os.Exit(1)
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get tree: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Repository: %s\n", absPath)
-	fmt.Println("Files:")
-
-	err = tree.Files().ForEach(func(f *object.File) error {
-		fmt.Println(" -", f.Name)
-		return nil
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing files: %v\n", err)
-		os.Exit(1)
-	}
+	fmt.Print(output.FormatSymbols(symbols, absPath))
 }
