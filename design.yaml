@@ -12,6 +12,7 @@ requirements:
     - Go と Rust のシンボル抽出ができる
     - ファイル単位でまとめた読みやすいテキスト出力
     - MCPサーバー（stdio）で repo_map ツールを提供できる
+    - テスト関数をオプションで除外できる（-include-tests / include_tests）
   should:
     - 重要度ランキング
     - トークン数制限（-tokens / MCP引数）
@@ -34,10 +35,15 @@ repo_structure: |
   │   └── mcp/                 # MCPサーバー（stdio）
   ├── internal/
   │   ├── analyzer/
+  │   │   ├── symbol.go        # Symbol 定義
+  │   │   ├── treesitter.go    # tree-sitter アナライザー
+  │   │   ├── rust_analyzer.go # Rust アナライザー（外部バイナリ）
+  │   │   └── ranker.go        # 重要度ランキング
   │   ├── output/
+  │   │   ├── formatter.go     # 整形
+  │   │   └── limiter.go       # トークン制限
   │   └── mapper/              # CLI/MCP共通
-  ├── rust-analyzer/
-  └── scripts/
+  └── rust-analyzer/           # Rust解析バイナリ（syn）
 
 approach:
   - Walking Skeletonから始める
@@ -63,15 +69,18 @@ contract:
   inputs:
     - Gitリポジトリのパス
     - （任意）最大トークン数
+    - （任意）テスト関数を含めるか
   outputs:
     - ファイル単位のシンボルマップ（テキスト）
   invariants:
     - Gitリポジトリでない場合はエラー終了
     - 未対応言語のファイルは無視する
     - 個別ファイルの解析失敗は処理全体を止めない
+    - デフォルトではテスト関数を除外する
   error_handling:
     - 解析エラーは警告としてstderrに出し、処理は継続する
     - リポジトリ自体が無効な場合のみfatal
+    - Rust analyzer バイナリ不在時はビルド方法を案内する
 
 testing:
   strategy:
@@ -82,6 +91,8 @@ testing:
     - Rustリポジトリから関数・型・traitが取れる
     - 空に近いリポジトリでpanicしない
     - -tokens 指定時に出力が制限される
+    - -include-tests=false でテスト関数が除外される
+    - -include-tests=true でテスト関数が含まれる
   how_to_run: |
     go test ./...
     cargo test --manifest-path rust-analyzer/Cargo.toml

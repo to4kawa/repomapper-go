@@ -11,6 +11,7 @@ Aider由来のRepoMap機能をGoで再実装したツール。
 - [x] シンボル抽出（Go / Rust）
 - [x] 重要度ランキング
 - [x] トークン制限付きマップ生成（`-tokens`）
+- [x] テスト関数の除外（`-include-tests` で含める）
 - [x] MCPサーバー対応（stdio / `repo_map` ツール）
 
 ## 使い方（CLI）
@@ -36,6 +37,8 @@ stdioで起動する。
 go run ./cmd/mcp
 # または
 go build -o repomapper-mcp ./cmd/mcp
+# または PATH にインストール
+go install ./cmd/mcp
 ```
 
 ### 提供ツール
@@ -70,7 +73,8 @@ go run ./cmd/repomapper .
 go run ./cmd/mcp
 go test ./...
 
-cargo build --manifest-path rust-analyzer/Cargo.toml
+# Rust解析を使う場合
+cargo build --release --manifest-path rust-analyzer/Cargo.toml
 ```
 
 ## 設計
