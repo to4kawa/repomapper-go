@@ -1,0 +1,109 @@
+# Project Bootstrap Template v2.0
+
+goal: |
+  # 最終的に「何ができていれば成功か」を1〜3文で明確に書く
+  - 標準入力またはファイルからCSV/JSON/テキストデータを受け取り、指定フォーマットで
+    標準出力またはファイルに変換・出力できるCLIツールが動作すること。
+  - 単一コマンドで完結し、パイプ処理（cat file | myapp）とファイル指定の両方に対応する。
+
+requirements:
+  must:
+    - -input / -output フラグでファイル指定できる（未指定時はstdin/stdout）
+    - -format フラグでデータ形式（csv, json, text）を指定できる
+    - 不正な入力・未対応フォーマットに対してエラーメッセージを返し、非ゼロで終了する
+  should:
+    - フォーマット判定を拡張しやすい構造にする（新形式追加が1ファイル追加で済む）
+  constraints:
+    language_framework: Go（標準ライブラリのみ、cobra等の外部CLIフレームワークは使わない）
+    external_services: なし
+    performance_scale: 単発実行のCLI、大規模ストリーミングは現時点で想定しない
+    other_hard_limits: 依存は最小限（テスト用のtestify程度は許容）
+
+repo_structure: |
+  root/
+  ├── go.mod
+  ├── go.sum
+  ├── README.md
+  ├── design.yaml
+  ├── Agents.md
+  ├── Contract.md
+  ├── cmd/
+  │   └── myapp/
+  │       └── main.go          # flagパース + 呼び出しのみ（薄く保つ）
+  ├── internal/
+  │   ├── converter/           # フォーマット変換の本体ロジック
+  │   │   ├── converter.go
+  │   │   ├── csv.go
+  │   │   ├── json.go
+  │   │   └── text.go
+  │   └── io/                  # Reader/Writerの抽象（必要なら）
+  │       └── io.go
+  ├── testdata/                # テスト用の入力ファイル
+  └── scripts/
+
+approach:
+  - 最小の動くもの（Walking Skeleton）を先に作る
+  - Contractを満たす実装を優先する
+  - テストを通しながら機能を足す
+  - 定期的にリファクタリングする
+  - 必要になるまで抽象化しない
+
+main_modules:
+  - name: core
+    responsibility: 入力データのパース、フォーマット変換、出力データの生成
+    depends_on: []
+  - name: infra
+    responsibility: ファイル/stdin/stdoutのio.Reader・io.Writerラッピング
+    depends_on: []
+  - name: cmd/myapp
+    responsibility: フラグパース、core呼び出し、エラー時の終了コード制御
+    depends_on: [core, infra]
+
+agents:
+  planner:
+    role: タスク分解と優先順位付け
+    input: Goal + 現在の状態
+    output: 次にやるべき小さなタスク一覧
+  implementer:
+    role: 実際のコードを書く
+    input: タスク定義 + Contract
+    output: 実装コード + 簡単な説明
+  reviewer:
+    role: 品質・Contract違反・テスト不足を指摘
+    input: 変更差分
+    output: 指摘リスト or LGTM
+  # 必要に応じて追加可能
+
+contract:
+  inputs:
+    - io.Reader（stdinまたはファイル）
+    - format文字列（csv | json | text）
+  outputs:
+    - io.Writer（stdoutまたはファイル）への変換済みデータ
+  invariants:
+    - -format未対応の値が渡された場合、変換処理を実行せずエラーを返す
+    - core.Run は与えられたReader/Writer以外の外部状態（グローバル変数等）に依存しない
+    - 入力が空でもpanicしない（空データとして処理するか、明示的エラーを返す）
+  error_handling:
+    - すべてのエラーはerrorとして呼び出し元に返し、main.goでos.Exit(1)に集約する
+    - パースエラーとI/Oエラーは区別できるメッセージにする（原因切り分けのため）
+
+implementation_loop:
+  - Plannerが「次の最小タスク」を決める
+  - Implementerが実装する
+  - テストを回す
+  - Reviewerが確認する
+  - 通ったら次のタスクへ / 落ちたら修正
+
+testing:
+  strategy:
+    unit: core配下のパース・変換ロジックを中心に
+    integration: cmd/myapp経由でのファイル入出力・stdin/stdout動作確認
+    manual_e2e: 主要フォーマット（csv/json/text）の変換が期待通りか
+  must_pass_cases:
+    - CSV入力 → 指定フォーマットへの変換が正しい
+    - JSON入力 → 指定フォーマットへの変換が正しい
+    - 未対応フォーマット指定時にエラー終了する
+    - stdin/stdout経由でのパイプ実行が成立する
+  how_to_run: |
+    go test ./...
