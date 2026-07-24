@@ -11,7 +11,7 @@ Aider由来のRepoMap機能をGoで再実装したツール。
 - [x] シンボル抽出（Go / Rust）
 - [x] 重要度ランキング
 - [x] トークン制限付きマップ生成（`-tokens`）
-- [ ] MCPサーバー対応
+- [x] MCPサーバー対応（stdio / repo_map ツール）
 
 ## 使い方（CLI）
 
