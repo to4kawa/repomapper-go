@@ -39,7 +39,7 @@ func NewRustAnalyzer() *RustAnalyzer {
 
 func (a *RustAnalyzer) AnalyzeDir(root string) ([]Symbol, error) {
 	if a.binPath == "" {
-		return nil, fmt.Errorf("repomapper-rust binary not found")
+		return nil, fmt.Errorf("repomapper-rust binary not found; build with: cargo build --release --manifest-path rust-analyzer/Cargo.toml")
 	}
 
 	cmd := exec.Command(a.binPath, root)
