@@ -21,7 +21,12 @@ go run ./cmd/repomapper <path>
 
 # トークン制限あり
 go run ./cmd/repomapper -tokens 8000 <path>
+
+# テスト関数を含める（デフォルトは除外）
+go run ./cmd/repomapper -include-tests <path>
 ```
+
+> **注意**: フラグはパスの前に指定すること。
 
 ## MCPサーバー
 
@@ -42,6 +47,7 @@ go build -o repomapper-mcp ./cmd/mcp
 引数:
 - `path` (string, 必須): リポジトリパス
 - `tokens` (int, 任意): 最大トークン数（0または省略で制限なし）
+- `include_tests` (bool, 任意): テスト関数を含める（デフォルト: false）
 
 ### クライアント設定例
 
