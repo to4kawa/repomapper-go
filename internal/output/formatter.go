@@ -38,6 +38,12 @@ func FormatSymbols(symbols []analyzer.Symbol, root string) string {
 		b.WriteString(path)
 		b.WriteString(":\n")
 		for _, s := range g.symbols {
+			// アノテーションを出力
+			for _, ann := range s.Annotations {
+				b.WriteString("  ")
+				b.WriteString(ann)
+				b.WriteString("\n")
+			}
 			b.WriteString("  ")
 			b.WriteString(formatSymbol(s))
 			b.WriteString("\n")
@@ -60,6 +66,10 @@ func formatSymbol(s analyzer.Symbol) string {
 		return fmt.Sprintf("type %s", s.Name)
 	case "interface":
 		return fmt.Sprintf("type %s interface", s.Name)
+	case "constant":
+		return fmt.Sprintf("const %s", s.Name)
+	case "variable":
+		return fmt.Sprintf("var %s", s.Name)
 	default:
 		return fmt.Sprintf("%s %s", s.Kind, s.Name)
 	}

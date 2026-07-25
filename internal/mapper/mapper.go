@@ -25,6 +25,7 @@ func Generate(opts Options) (string, error) {
 
 	var all []analyzer.Symbol
 
+	// Tree-sitterアナライザー（汎用、Python以外）
 	ts := analyzer.NewTreeSitterAnalyzer()
 	if syms, err := ts.AnalyzeDir(opts.Path); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: treesitter: %v\n", err)
@@ -32,6 +33,16 @@ func Generate(opts Options) (string, error) {
 		all = append(all, syms...)
 	}
 
+	// Python固有アナライザー（汎用の結果を上書き）
+	py := analyzer.NewPythonAnalyzer()
+	if syms, err := py.AnalyzeDir(opts.Path); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: python analyzer: %v\n", err)
+	} else {
+		// Pythonファイルの重複を除去してから追加
+		all = mergePythonSymbols(all, syms)
+	}
+
+	// Rustアナライザー
 	rs := analyzer.NewRustAnalyzer()
 	if syms, err := rs.AnalyzeDir(opts.Path); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: rust analyzer: %v\n", err)
@@ -50,6 +61,27 @@ func Generate(opts Options) (string, error) {
 		text = output.LimitByTokens(text, opts.MaxTokens)
 	}
 	return text, nil
+}
+
+// mergePythonSymbols は汎用アナライザーの結果とPython固有の結果をマージする
+func mergePythonSymbols(generic, python []analyzer.Symbol) []analyzer.Symbol {
+	// Pythonファイルのパスを収集
+	pythonFiles := map[string]bool{}
+	for _, s := range python {
+		pythonFiles[s.File] = true
+	}
+
+	// 汎用アナライザーからPythonファイル以外を保持
+	var result []analyzer.Symbol
+	for _, s := range generic {
+		if !pythonFiles[s.File] {
+			result = append(result, s)
+		}
+	}
+
+	// Python固有の結果を追加
+	result = append(result, python...)
+	return result
 }
 
 func filterOutTests(symbols []analyzer.Symbol) []analyzer.Symbol {

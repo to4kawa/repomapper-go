@@ -1,0 +1,75 @@
+# Python Analyzer Enhancement Design
+
+goal: |
+  Python固有のシンボル解析を追加し、以下の問題を解決する:
+  - ネスト関数の誤検出
+  - デコレータ情報の欠落
+  - グローバル変数の未抽出
+  - クラスメソッドの区別
+
+requirements:
+  must:
+    - ネスト関数を除外する
+    - デコレータ（@app.route等）を抽出する
+    - グローバル変数・定数を抽出する
+    - クラスとメソッドを区別する
+  should:
+    - Python 3.xの標準構文に対応する
+    - 他の言語アナライザーと同様のインターフェースを維持する
+
+implementation:
+  files:
+    - path: internal/analyzer/python_analyzer.go
+      description: Python固有のシンボル抽出
+    - path: internal/analyzer/symbol.go
+      description: Symbol構造体にAnnotationsフィールド追加
+    - path: internal/mapper/mapper.go
+      description: Pythonアナライザーを統合
+    - path: internal/output/formatter.go
+      description: アノテーション出力対応
+
+design_decisions:
+  - decision: ネスト関数の検出方法
+    rationale: Tree-sitterのASTで親子関係を確認し、トップレベル関数のみ抽出
+  - decision: デコレータの抽出方法
+    rationale: 関数定義の直前のdecoratorノードを取得
+  - decision: Symbol構造体の変更
+    rationale: 後方互換性を保ちつつAnnotationsフィールドを追加
+
+testing:
+  strategy:
+    - MADO-queue(app.py)でテスト
+    - ネスト関数が除外されることを確認
+    - デコレータが表示されることを確認
+  must_pass_cases:
+    - ネスト関数_sが表示されない
+    - @app.route('/')がhome()に付与されている
+    - @app.template_filter('to_datetime')が表示される
+    - DB_PATH等のグローバル変数が表示される
+
+results:
+  status: 完了
+  findings: |
+    MADO-queue (app.py) でのテスト結果:
+    
+    Before (汎用Tree-sitterのみ):
+    - ネスト関数 `s` が表示される
+    - デコレータ情報なし
+    - グローバル変数一部のみ
+    
+    After (Python固有アナライザー追加):
+    - ネスト関数 `s` は表示されない ✓
+    - @app.route('/') が表示される ✓
+    - @app.template_filter('to_datetime') が表示される ✓
+    - @contextmanager が表示される ✓
+    - DB_PATH, PRINTER_NAME 等の定数が表示される ✓
+    
+    変更ファイル:
+    - internal/analyzer/symbol.go: Annotations フィールド追加
+    - internal/analyzer/python_analyzer.go: 新規作成
+    - internal/mapper/mapper.go: Pythonアナライザー統合
+    - internal/output/formatter.go: アノテーション出力対応
+    
+    テスト結果:
+    - go test ./... : 全テスト合格
+    - go build ./... : ビルド成功
